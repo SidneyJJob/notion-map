@@ -9,7 +9,7 @@
         width: 100%;
       }
     </style>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAz6366teB2HIIxRi1MpJKmxePClo_LGGU&callback=initMap" async defer></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAz6366teB2HIIxRi1MpJKcallback=initMap
     <script>
       async function initMap() {
         const map = new google.maps.Map(document.getElementById("map"), {
@@ -53,7 +53,7 @@
           const desc = row[descIdx] || "（無描述）";
           const day = row[dayIdx];
 
-          let color = "#000000"; // default black
+          let color = "#000000"; // 預設黑色
           if (day) {
             if (!dayColorMap[day]) {
               while (randomIndex < randomColorsPool.length && usedColors.has(randomColorsPool[randomIndex])) {
