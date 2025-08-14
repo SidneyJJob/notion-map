@@ -9,7 +9,8 @@
         width: 100%;
       }
     </style>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAz6366temxePClo_LGGU
+    <!-- 加入 callback、async、defer，確保 API 載入完成後才執行 initMap -->
+    https://maps.googleapis.com/maps/api/js?key=AIzaSyAz6366teB2HIIxRi1MpJKmxePClo_LGGU&callback=initMap
     <script>
       async function initMap() {
         const map = new google.maps.Map(document.getElementById("map"), {
@@ -94,8 +95,6 @@
           });
         }
       }
-
-      window.onload = initMap;
     </script>
   </head>
   <body>
