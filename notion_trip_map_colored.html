@@ -9,7 +9,9 @@
         width: 100%;
       }
     </style>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAz6366teB2HIIxRi1MpJKmxePClo_LGGU"></   async function initMap() {
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAz6366temxePClo_LGGU
+    <script>
+      async function initMap() {
         const map = new google.maps.Map(document.getElementById("map"), {
           zoom: 7,
           center: { lat: 23.5, lng: 121 },
@@ -28,8 +30,8 @@
         const visitTimeIdx = getIndex("拜訪時間");
         const dayIdx = getIndex("Day");
 
-        // 自訂 Day 對應的顏色
-        const dayColorMap = {
+        // 已定義的 Day 顏色
+        const predefinedColors = {
           "Day1": "#FFC0CB", // 粉色
           "Day2": "#FFFF00", // 黃色
           "Day3": "#A52A2A", // 棕色
@@ -38,6 +40,19 @@
           "Day6": "#0000FF", // 藍色
         };
 
+        // 備用顏色（自動分配）
+        const fallbackColors = [
+          "#00CED1", // 青色
+          "#8A2BE2", // 紫羅蘭
+          "#FF8C00", // 深橙
+          "#32CD32", // 萊姆綠
+          "#FF1493", // 深粉紅
+          "#4682B4", // 鋼藍
+        ];
+
+        const dayColorMap = { ...predefinedColors };
+        let fallbackIndex = 0;
+
         for (const row of dataRows) {
           const name = row[nameIdx];
           const address = row[addressIdx];
@@ -45,7 +60,12 @@
           const visitTime = row[visitTimeIdx];
           const day = row[dayIdx];
 
-          const color = dayColorMap[day] || "#000000"; // 預設為黑色
+          if (!dayColorMap[day]) {
+            dayColorMap[day] = fallbackColors[fallbackIndex % fallbackColors.length];
+            fallbackIndex++;
+          }
+
+          const color = dayColorMap[day];
 
           const geocoder = new google.maps.Geocoder();
           geocoder.geocode({ address: address }, (results, status) => {
