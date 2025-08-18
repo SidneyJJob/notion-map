@@ -1,147 +1,109 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>Notion Trip Map</title>
-    <meta charset="utf-8">
-    <style>
-      #map {
-        height: 100vh;
-        width: 100%;
-      }
-    </style>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAz6366teB2HIIxRi1MpJKmxePClo_LGGU&callback=script>
-      let map;
-      let markers = [];
+<head>
+  <title>Notion Trip Map (Leaflet)</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    #map {
+      height: 100vh;
+      width: 100%;
+    }
+  </style>
+  https://unpkg.com/leaflet@1.9.4/dist/leaflet.css
+  https://unpkg.com/leaflet@1.9.4/dist/leaflet.js
+</head>
+<body>
+  <div id="map"></div>
+  <script>
+    const map = L.map('map').setView([23.5, 121], 7); // 預設台灣
 
-      async function initMap() {
-        // 1. 使用者定位
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(async position => {
-            const userLocation = {
-              lat: position.coords.latitude,
-              lng: position.coords.longitude
-            };
+    // 使用 OpenStreetMap 圖層
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
 
-            map = new google.maps.Map(document.getElementById("map"), {
-              zoom: 12,
-              center: userLocation
-            });
+    // 嘗試使用者定位
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(pos => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        map.setView([lat, lng], 12);
+        L.marker([lat, lng]).addTo(map).bindPopup("你的位置").openPopup();
+      });
+    }
 
-            await loadMarkers();
-          }, async () => {
-            // 定位失敗，使用預設位置
-            map = new google.maps.Map(document.getElementById("map"), {
-              zoom: 7,
-              center: { lat: 23.5, lng: 121 }
-            });
-            await loadMarkers();
-          });
-        } else {
-          // 不支援定位
-          map = new google.maps.Map(document.getElementById("map"), {
-            zoom: 7,
-            center: { lat: 23.5, lng: 121 }
-          });
-          await loadMarkers();
-        }
-      }
+    // Day 顏色設定
+    const fixedColors = {
+      "Day1": "#FFC0CB",
+      "Day2": "#FFFF00",
+      "Day3": "#A52A2A",
+      "Day4": "#808080",
+      "Day5": "#FF0000",
+      "Day6": "#0000FF"
+    };
+    const randomColorsPool = [
+      "#00CED1", "#8A2BE2", "#FF8C00", "#32CD32", "#FF1493", "#4682B4",
+      "#7FFF00", "#FF4500", "#DA70D6", "#20B2AA", "#FFD700", "#ADFF2F"
+    ];
+    const dayColorMap = { ...fixedColors };
+    let usedColors = new Set(Object.values(fixedColors));
+    let randomIndex = 0;
 
-      async function loadMarkers() {
-        const response = await fetch("https://docs.google.com/spreadsheets/d/1LWZ6rzNtjv3VoEfWmxEpGctNazN2ddpRYnslwcwoUnE/export?format=csv");
-        const csvText = await response.text();
-        const rows = csvText.split("\n").map(row => row.split(","));
-        const headers = rows[0];
-        const dataRows = rows.slice(1);
+    // 讀取 CSV 並標記地點
+    async function loadCSV() {
+      const response = await fetch("https://docs.google.com/spreadsheets/d/1LWZ6rzNtjv3VoEfWmxEpGctNazN2ddpRYnslwcwoUnE/export?format=csv");
+      const text = await response.text();
+      const rows = text.split("\n").map(r => r.split(","));
+      const headers = rows[0];
+      const dataRows = rows.slice(1);
 
-        const getIndex = name => headers.indexOf(name);
-        const nameIdx = getIndex("行程景點");
-        const addressIdx = getIndex("地址");
-        const descIdx = getIndex("描述");
-        const visitTimeIdx = getIndex("拜訪時間");
-        const dayIdx = getIndex("Day");
+      const getIndex = name => headers.indexOf(name);
+      const nameIdx = getIndex("行程景點");
+      const addressIdx = getIndex("地址");
+      const descIdx = getIndex("描述");
+      const visitTimeIdx = getIndex("拜訪時間");
+      const dayIdx = getIndex("Day");
 
-        const fixedColors = {
-          "Day1": "#FFC0CB",
-          "Day2": "#FFFF00",
-          "Day3": "#A52A2A",
-          "Day4": "#808080",
-          "Day5": "#FF0000",
-          "Day6": "#0000FF"
-        };
+      for (const row of dataRows) {
+        const name = row[nameIdx] || "未命名景點";
+        const address = row[addressIdx] || "地址未知";
+        const desc = row[descIdx] || "（無描述）";
+        const visitTime = row[visitTimeIdx] || "時間未定";
+        const day = row[dayIdx] || "未分類";
 
-        const randomColorsPool = [
-          "#00CED1", "#8A2BE2", "#FF8C00", "#32CD32", "#FF1493", "#4682B4",
-          "#7FFF00", "#FF4500", "#DA70D6", "#20B2AA", "#FFD700", "#ADFF2F"
-        ];
-
-        const dayColorMap = { ...fixedColors };
-        let usedColors = new Set(Object.values(fixedColors));
-        let randomIndex = 0;
-
-        for (const row of dataRows) {
-          const name = row[nameIdx] || "未命名景點";
-          const address = row[addressIdx] || "地址未知";
-          const desc = row[descIdx] || "（無描述）";
-          const visitTime = row[visitTimeIdx] || "時間未定";
-          const day = row[dayIdx] || "未分類";
-
-          let color = "#000000";
-          if (!dayColorMap[day]) {
-            while (randomIndex < randomColorsPool.length && usedColors.has(randomColorsPool[randomIndex])) {
-              randomIndex++;
-            }
-            color = randomColorsPool[randomIndex % randomColorsPool.length];
-            dayColorMap[day] = color;
-            usedColors.add(color);
+        let color = "#000000";
+        if (!dayColorMap[day]) {
+          while (randomIndex < randomColorsPool.length && usedColors.has(randomColorsPool[randomIndex])) {
             randomIndex++;
-          } else {
-            color = dayColorMap[day];
           }
+          color = randomColorsPool[randomIndex % randomColorsPool.length];
+          dayColorMap[day] = color;
+          usedColors.add(color);
+          randomIndex++;
+        } else {
+          color = dayColorMap[day];
+        }
 
-          const geocoder = new google.maps.Geocoder();
-          geocoder.geocode({ address: address }, (results, status) => {
-            if (status === "OK" && results[0]) {
-              const marker = new google.maps.Marker({
-                map: map,
-                position: results[0].geometry.location,
-                title: name,
-                icon: {
-                  path: google.maps.SymbolPath.CIRCLE,
-                  scale: 8,
-                  fillColor: color,
-                  fillOpacity: 0.8,
-                  strokeWeight: 1,
-                },
-              });
+        // 使用 Nominatim API 進行地理編碼
+        const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`);
+        const geoData = await geoRes.json();
+        if (geoData.length > 0) {
+          const lat = parseFloat(geoData[0].lat);
+          const lon = parseFloat(geoData[0].lon);
+          const marker = L.circleMarker([lat, lon], {
+            radius: 8,
+            color: color,
+            fillColor: color,
+            fillOpacity: 0.8
+          }).addTo(map);
 
-              const infoWindow = new google.maps.InfoWindow({
-                content: `<strong>${name}</strong><br><em>${day}</em><br>${desc}<br><small>${visitTime}</small><br><small>${address}</small>`,
-              });
-
-              marker.addListener("click", () => {
-                infoWindow.open(map, marker);
-              });
-
-              markers.push({ name, marker });
-            }
-          });
+          marker.bindPopup(`<strong>${name}</strong><br><em>${day}</em><br>${desc}<br><small>${visitTime}</small><br><small>${address}</small>`);
         }
       }
+    }
 
-      // 互動功能：外部點選景點 → 地圖高亮
-      window.highlightLocation = function(name) {
-        const target = markers.find(m => m.name === name);
-        if (target) {
-          map.setCenter(target.marker.getPosition());
-          map.setZoom(15);
-          google.maps.event.trigger(target.marker, "click");
-        } else {
-          alert("找不到指定景點：" + name);
-        }
-      };
-    </script>
-  </head>
-  <body>
-    <div id="map"></div>
-  </body>
+    loadCSV();
+  </script>
+</body>
 </html>
