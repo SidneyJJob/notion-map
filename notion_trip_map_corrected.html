@@ -9,7 +9,9 @@
         width: 100%;
       }
     </style>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAz6366teB2HIIxRi1MpJKmxePClo_LGGU&callback=initMap" async deferfunction initMap() {
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAz636pJKmxePClo_LGGU
+    <script>
+      async function initMap() {
         const map = new google.maps.Map(document.getElementById("map"), {
           zoom: 7,
           center: { lat: 23.5, lng: 121 },
@@ -28,46 +30,41 @@
         const visitTimeIdx = getIndex("拜訪時間");
         const dayIdx = getIndex("Day");
 
-        const fixedColors = {
-          "Day1": "#FFC0CB", // 粉色
-          "Day2": "#FFFF00", // 黃色
-          "Day3": "#A52A2A", // 棕色
-          "Day4": "#808080", // 灰色
-          "Day5": "#FF0000", // 紅色
-          "Day6": "#0000FF"  // 藍色
+        const fixedDayColors = {
+          "Day1": "pink",
+          "Day2": "yellow",
+          "Day3": "brown",
+          "Day4": "gray",
+          "Day5": "red",
+          "Day6": "blue"
         };
 
-        const randomColorsPool = [
-          "#00CED1", "#8A2BE2", "#FF8C00", "#32CD32", "#FF1493", "#4682B4",
-          "#7FFF00", "#FF4500", "#DA70D6", "#20B2AA", "#FFD700", "#ADFF2F"
+        const randomColorPool = [
+          "orange", "purple", "cyan", "magenta", "lime", "teal", "gold", "navy", "salmon", "olive"
         ];
 
-        const dayColorMap = { ...fixedColors };
-        let usedColors = new Set(Object.values(fixedColors));
-        let randomIndex = 0;
+        const usedColors = new Set(Object.values(fixedDayColors));
+        const dayColorMap = { ...fixedDayColors };
+
+        function getColorForDay(day) {
+          if (!day || day.trim() === "") return "black";
+          if (dayColorMap[day]) return dayColorMap[day];
+
+          const availableColors = randomColorPool.filter(c => !usedColors.has(c));
+          const color = availableColors.length > 0 ? availableColors[0] : "black";
+          dayColorMap[day] = color;
+          usedColors.add(color);
+          return color;
+        }
 
         for (const row of dataRows) {
-          const name = row[nameIdx] || "未命名景點";
-          const address = row[addressIdx] || "地址未知";
-          const desc = row[descIdx] || "（無描述）";
-          const visitTime = row[visitTimeIdx] || "時間未定";
-          const day = row[dayIdx]?.trim() || "";
+          const name = row[nameIdx];
+          const address = row[addressIdx];
+          const desc = row[descIdx];
+          const visitTime = row[visitTimeIdx];
+          const day = row[dayIdx];
 
-          let color = "#000000"; // 預設黑色（無 Day）
-
-          if (day) {
-            if (!dayColorMap[day]) {
-              while (randomIndex < randomColorsPool.length && usedColors.has(randomColorsPool[randomIndex])) {
-                randomIndex++;
-              }
-              color = randomColorsPool[randomIndex % randomColorsPool.length];
-              dayColorMap[day] = color;
-              usedColors.add(color);
-              randomIndex++;
-            } else {
-              color = dayColorMap[day];
-            }
-          }
+          const markerColor = getColorForDay(day);
 
           const geocoder = new google.maps.Geocoder();
           geocoder.geocode({ address: address }, (results, status) => {
@@ -79,14 +76,14 @@
                 icon: {
                   path: google.maps.SymbolPath.CIRCLE,
                   scale: 8,
-                  fillColor: color,
+                  fillColor: markerColor,
                   fillOpacity: 0.8,
                   strokeWeight: 1,
                 },
               });
 
               const infoWindow = new google.maps.InfoWindow({
-                content: `<strong>${name}</strong><br><em>${day || "未分類"}</em><br>${desc}<br><small>${visitTime}</small><br><small>${address}</small>`,
+                content: `<strong>${name}</strong><br>${desc}<br><em>${visitTime}</em><br><small>${address}</small>`,
               });
 
               marker.addListener("click", () => {
@@ -96,6 +93,8 @@
           });
         }
       }
+
+      window.onload = initMap;
     </script>
   </head>
   <body>
